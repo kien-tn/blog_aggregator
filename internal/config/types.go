@@ -23,6 +23,15 @@ func (c Config) SetUser(userName string) error {
 	return nil
 }
 
+func (c Config) SetDBUrl(dbUrl string) error {
+	c.DBUrl = dbUrl
+	err := write(c)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func write(c Config) error {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
