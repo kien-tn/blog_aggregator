@@ -90,6 +90,15 @@ func handlerLogin(s *state, cmd command) error {
 	return nil
 }
 
+func handlerReset(s *state, cmd command) error {
+	err := s.db.DeleteUsers(context.Background())
+	if err != nil {
+		return fmt.Errorf("error deleting users: %w", err)
+	}
+	fmt.Println("Users successfully deleted")
+	return nil
+}
+
 func main() {
 
 	s := &state{}
@@ -112,6 +121,7 @@ func main() {
 	cmds.register("update-db-url", handlerUpdateDBUrl)
 	cmds.register("login", handlerLogin)
 	cmds.register("register", handlerRegister)
+	cmds.register("reset", handlerReset)
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "missing argument")
 		os.Exit(1)
