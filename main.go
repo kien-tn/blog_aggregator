@@ -99,6 +99,22 @@ func handlerReset(s *state, cmd command) error {
 	return nil
 }
 
+func handlerGetUsers(s *state, cmd command) error {
+	users, err := s.db.GetUsers(context.Background())
+	if err != nil {
+		return fmt.Errorf("error getting users: %w", err)
+	}
+	fmt.Println("Users:")
+	for _, u := range users {
+		if u.Name == s.config.CurrentUserName {
+			fmt.Printf("* %v (current)\n", u.Name)
+		} else {
+			fmt.Println("*", u.Name)
+		}
+	}
+	return nil
+}
+
 func main() {
 
 	s := &state{}
@@ -122,6 +138,7 @@ func main() {
 	cmds.register("login", handlerLogin)
 	cmds.register("register", handlerRegister)
 	cmds.register("reset", handlerReset)
+	cmds.register("users", handlerGetUsers)
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "missing argument")
 		os.Exit(1)
