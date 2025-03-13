@@ -86,6 +86,7 @@ func handlerAddFeed(s *state, cmd command) error {
 		return fmt.Errorf("error getting user: %w", err)
 	}
 	feed, err := s.db.CreateFeed(context.Background(), database.CreateFeedParams{
+		ID:        uuid.New(),
 		Name:      name,
 		Url:       url,
 		UserID:    uuid.NullUUID{UUID: user.ID, Valid: true},
@@ -96,5 +97,22 @@ func handlerAddFeed(s *state, cmd command) error {
 		return fmt.Errorf("error creating feed: %w", err)
 	}
 	fmt.Fprintf(os.Stdout, "Feed %v successfully created\n", feed)
+	return nil
+}
+
+func handlerGetFeeds(s *state, cmd command) error {
+	feeds, err := s.db.GetFeeds(context.Background())
+	if err != nil {
+		return fmt.Errorf("error getting feeds: %w", err)
+	}
+	for _, feed := range feeds {
+		fmt.Fprintf(os.Stdout, "Feed Name: %v\n", feed.Name)
+		fmt.Fprintf(os.Stdout, "Feed URL: %v\n", feed.Url)
+		user, err := s.db.GetUser(context.Background(), feed.UserID.UUID)
+		if err != nil {
+			return fmt.Errorf("error getting user: %w", err)
+		}
+		fmt.Fprintf(os.Stdout, "User: %v\n", user.Name)
+	}
 	return nil
 }
