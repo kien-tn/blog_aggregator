@@ -140,6 +140,7 @@ func main() {
 	cmds.register("reset", handlerReset)
 	cmds.register("users", handlerGetUsers)
 	cmds.register("agg", handlerFetchFeed)
+	cmds.register("addfeed", handlerAddFeed)
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "missing argument")
 		os.Exit(1)

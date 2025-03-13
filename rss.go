@@ -8,6 +8,10 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/kien-tn/blog_aggregator/internal/database"
 )
 
 type RSSFeed struct {
@@ -68,5 +72,29 @@ func handlerFetchFeed(s *state, cmd command) error {
 	fmt.Fprintf(os.Stdout, "Title: %v\n", feed.Channel.Title)
 	fmt.Fprintf(os.Stdout, "Description: %v\n", feed.Channel.Description)
 	// fmt.Fprintf(os.Stdout, "Feed fetched successfully: %v\n", feed)
+	return nil
+}
+
+func handlerAddFeed(s *state, cmd command) error {
+	if len(cmd.arguments) < 2 {
+		return fmt.Errorf("addfeed requires 2 args: a name and a URL")
+	}
+	name := cmd.arguments[0]
+	url := cmd.arguments[1]
+	user, err := s.db.GetUserByName(context.Background(), s.config.CurrentUserName)
+	if err != nil {
+		return fmt.Errorf("error getting user: %w", err)
+	}
+	feed, err := s.db.CreateFeed(context.Background(), database.CreateFeedParams{
+		Name:      name,
+		Url:       url,
+		UserID:    uuid.NullUUID{UUID: user.ID, Valid: true},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	})
+	if err != nil {
+		return fmt.Errorf("error creating feed: %w", err)
+	}
+	fmt.Fprintf(os.Stdout, "Feed %v successfully created\n", feed)
 	return nil
 }
