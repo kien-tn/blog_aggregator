@@ -115,6 +115,18 @@ func handlerGetUsers(s *state, cmd command) error {
 	return nil
 }
 
+func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) error) func(s *state, cmd command) error {
+	return func(s *state, cmd command) error {
+		if s.config.CurrentUserName == "" {
+			return fmt.Errorf("not logged in")
+		}
+		user, err := s.db.GetUserByName(context.Background(), s.config.CurrentUserName)
+		if err != nil {
+			return fmt.Errorf("error getting user: %w", err)
+		}
+		return handler(s, cmd, user)
+	}
+}
 func main() {
 
 	s := &state{}
@@ -140,10 +152,10 @@ func main() {
 	cmds.register("reset", handlerReset)
 	cmds.register("users", handlerGetUsers)
 	cmds.register("agg", handlerFetchFeed)
-	cmds.register("addfeed", handlerAddFeed)
+	cmds.register("addfeed", middlewareLoggedIn(handlerAddFeed))
 	cmds.register("feeds", handlerGetFeeds)
-	cmds.register("follow", handlerFollow)
-	cmds.register("following", handlerFollowing)
+	cmds.register("follow", middlewareLoggedIn(handlerFollow))
+	cmds.register("following", middlewareLoggedIn(handlerFollowing))
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "missing argument")
 		os.Exit(1)

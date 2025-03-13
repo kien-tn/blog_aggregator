@@ -10,7 +10,7 @@ import (
 	"github.com/kien-tn/blog_aggregator/internal/database"
 )
 
-func handlerFollow(s *state, cmd command) error {
+func handlerFollow(s *state, cmd command, user database.User) error {
 	if len(cmd.arguments) == 0 {
 		return fmt.Errorf("a feed url is required")
 	}
@@ -18,11 +18,6 @@ func handlerFollow(s *state, cmd command) error {
 	rssFeed, err := s.db.GetFeedByUrl(context.Background(), cmd.arguments[0])
 	if err != nil {
 		return fmt.Errorf("error fetching feed: %w", err)
-	}
-	// Fetch the user
-	user, err := s.db.GetUserByName(context.Background(), s.config.CurrentUserName)
-	if err != nil {
-		return fmt.Errorf("error fetching user: %w", err)
 	}
 	// Insert the feed
 	_, err = s.db.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams{
@@ -39,8 +34,8 @@ func handlerFollow(s *state, cmd command) error {
 	return nil
 }
 
-func handlerFollowing(s *state, cmd command) error {
-	follows, err := s.db.GetFeedFollowsForUser(context.Background(), s.config.CurrentUserName)
+func handlerFollowing(s *state, cmd command, user database.User) error {
+	follows, err := s.db.GetFeedFollowsForUser(context.Background(), user.Name)
 	if err != nil {
 		return fmt.Errorf("error fetching follows: %w", err)
 	}
