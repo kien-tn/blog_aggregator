@@ -30,6 +30,34 @@ type RSSItem struct {
 	PubDate     string `xml:"pubDate"`
 }
 
+func scrapeFeeds(s *state) error {
+	feedToFetch, err := s.db.GetNextFeedToFetch(context.Background())
+	if err != nil {
+		return fmt.Errorf("error getting next feed to fetch: %w", err)
+	}
+	if feedToFetch.ID == uuid.Nil {
+		return fmt.Errorf("no feeds to fetch")
+	}
+	err = s.db.MarkFeedFetched(context.Background(), feedToFetch.ID)
+	if err != nil {
+		return fmt.Errorf("error marking feed fetched: %w", err)
+	}
+	feed, err := fetchFeed(context.Background(), feedToFetch.Url)
+	if err != nil {
+		return fmt.Errorf("error fetching feed: %w", err)
+	}
+	feed.Channel.Title = html.UnescapeString(feed.Channel.Title)
+	feed.Channel.Description = html.UnescapeString(feed.Channel.Description)
+	fmt.Fprintf(os.Stdout, "Title: %v\n", feed.Channel.Title)
+	fmt.Fprintf(os.Stdout, "Description: %v\n", feed.Channel.Description)
+	for _, item := range feed.Channel.Item {
+		fmt.Fprintf(os.Stdout, "Item Title: %v\n", html.UnescapeString(item.Title))
+		fmt.Fprintf(os.Stdout, "Item PubDate: %v\n", item.PubDate)
+		fmt.Fprintf(os.Stdout, "-------------------------------\n")
+	}
+	return nil
+}
+
 func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	// Fetch the feed
 	httpClient := &http.Client{}
@@ -60,17 +88,19 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 func handlerFetchFeed(s *state, cmd command) error {
 	// do something
 	if len(cmd.arguments) == 0 {
-		return fmt.Errorf("a feed URL is required")
+		return fmt.Errorf("a time_between_reqs is required")
 	}
-	feedURL := cmd.arguments[0]
-	feed, err := fetchFeed(context.Background(), feedURL)
-	feed.Channel.Title = html.UnescapeString(feed.Channel.Title)
-	feed.Channel.Description = html.UnescapeString(feed.Channel.Description)
+	timeBetweenRequests, err := time.ParseDuration(cmd.arguments[0])
 	if err != nil {
-		return fmt.Errorf("error fetching feed: %w", err)
+		return fmt.Errorf("invalid duration: %w", err)
 	}
-	fmt.Fprintf(os.Stdout, "Title: %v\n", feed.Channel.Title)
-	fmt.Fprintf(os.Stdout, "Description: %v\n", feed.Channel.Description)
+	fmt.Fprintf(os.Stdout, "Collecting feeds every %v\n", timeBetweenRequests)
+	ticker := time.NewTicker(timeBetweenRequests)
+	defer ticker.Stop()
+	for ; ; <-ticker.C {
+		scrapeFeeds(s)
+	}
+
 	// fmt.Fprintf(os.Stdout, "Feed fetched successfully: %v\n", feed)
 	return nil
 }
