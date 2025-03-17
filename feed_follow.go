@@ -44,3 +44,18 @@ func handlerFollowing(s *state, cmd command, user database.User) error {
 	}
 	return nil
 }
+
+func handlerUnfollow(s *state, cmd command, user database.User) error {
+	if len(cmd.arguments) == 0 {
+		return fmt.Errorf("a feed url is required")
+	}
+	err := s.db.DropFeedFollowsForUrlCurrentUser(context.Background(), database.DropFeedFollowsForUrlCurrentUserParams{
+		Url:  cmd.arguments[0],
+		Name: s.config.CurrentUserName,
+	})
+	if err != nil {
+		return fmt.Errorf("error unfollowing feed: %w", err)
+	}
+	fmt.Fprintf(os.Stdout, "Feed %v successfully unfollowed for current user %v\n", cmd.arguments[0], s.config.CurrentUserName)
+	return nil
+}

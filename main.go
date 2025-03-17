@@ -156,6 +156,7 @@ func main() {
 	cmds.register("feeds", handlerGetFeeds)
 	cmds.register("follow", middlewareLoggedIn(handlerFollow))
 	cmds.register("following", middlewareLoggedIn(handlerFollowing))
+	cmds.register("unfollow", middlewareLoggedIn(handlerUnfollow))
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "missing argument")
 		os.Exit(1)
@@ -166,5 +167,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	config.ReadCfgFile()
+	// config.ReadCfgFile()
 }

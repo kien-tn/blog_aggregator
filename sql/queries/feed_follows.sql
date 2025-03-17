@@ -34,3 +34,9 @@ FROM
     JOIN users u ON ff.user_id = u.id
 WHERE
     u.name = $1;
+
+-- name: DropFeedFollowsForUrlCurrentUser :exec
+DELETE FROM feed_follows
+WHERE
+    feed_id = (SELECT id FROM feeds WHERE url = $1)
+    AND user_id = (SELECT id FROM users WHERE users.name = $2);
