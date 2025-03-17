@@ -30,6 +30,17 @@ type RSSItem struct {
 	PubDate     string `xml:"pubDate"`
 }
 
+func parsePubDate(pubDate string) time.Time {
+	parsedTime, err := time.Parse(time.RFC1123Z, pubDate)
+	if err != nil {
+		parsedTime, err = time.Parse(time.RFC1123, pubDate)
+		if err != nil {
+			return time.Time{}
+		}
+	}
+	return parsedTime
+}
+
 func scrapeFeeds(s *state) error {
 	feedToFetch, err := s.db.GetNextFeedToFetch(context.Background())
 	if err != nil {
@@ -46,14 +57,29 @@ func scrapeFeeds(s *state) error {
 	if err != nil {
 		return fmt.Errorf("error fetching feed: %w", err)
 	}
-	feed.Channel.Title = html.UnescapeString(feed.Channel.Title)
+
 	feed.Channel.Description = html.UnescapeString(feed.Channel.Description)
 	fmt.Fprintf(os.Stdout, "Title: %v\n", feed.Channel.Title)
 	fmt.Fprintf(os.Stdout, "Description: %v\n", feed.Channel.Description)
 	for _, item := range feed.Channel.Item {
-		fmt.Fprintf(os.Stdout, "Item Title: %v\n", html.UnescapeString(item.Title))
-		fmt.Fprintf(os.Stdout, "Item PubDate: %v\n", item.PubDate)
-		fmt.Fprintf(os.Stdout, "-------------------------------\n")
+		_, err = s.db.GetPostByUrl(context.Background(), item.Link)
+		if err != nil {
+			continue
+		}
+		_, err = s.db.CreatePost(context.Background(), database.CreatePostParams{
+			ID:          uuid.New(),
+			FeedID:      feedToFetch.ID,
+			Title:       html.UnescapeString(item.Title),
+			Url:         html.UnescapeString(item.Link),
+			Description: html.UnescapeString(item.Description),
+			PublishedAt: parsePubDate(item.PubDate),
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+		})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error creating post: %v\n", err)
+			return fmt.Errorf("error creating post: %w", err)
+		}
 	}
 	return nil
 }
